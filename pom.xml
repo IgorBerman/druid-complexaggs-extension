@@ -32,7 +32,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <druid.version>0.23.0</druid.version>
+    <druid.version>24.0.1</druid.version>
     <jmh.version>1.9.2</jmh.version>
   </properties>
 
@@ -43,6 +43,21 @@
       <version>${druid.version}</version>
       <scope>provided</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-sql</artifactId>
+      <version>${druid.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/net.sf.trove4j/trove4j -->
+    <dependency>
+      <groupId>net.sf.trove4j</groupId>
+      <artifactId>trove4j</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+
 
     <!-- Tests -->
     <dependency>

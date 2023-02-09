@@ -1,1 +1,1 @@
-io.imply.druid.example.ExampleExtensionModule
+org.apache.druid.query.aggregation.complexaggs.ComplexAggregatorsExtensionModule
