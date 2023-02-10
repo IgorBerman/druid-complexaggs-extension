@@ -18,14 +18,12 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.complexaggs.ComplexAggregatorsExtensionModule;
-import org.apache.druid.query.aggregation.complexaggs.TLongLongHashMapSerializer;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -43,9 +41,7 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     public static final int MAX_NUM_OF_DISTINCT_KEYS = 1000;//TODO make it param?
     public static final String TYPE_NAME = "frequency";
     public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
-    public static final ColumnType FINAL_TYPE = NestedDataComplexTypeSerde.TYPE;
-
-    static final TLongLongHashMapSerializer serializer = new TLongLongHashMapSerializer();
+    public static final ColumnType FINAL_TYPE = ColumnType.STRING;
 
     public static final Comparator COMPARATOR = new Comparator() {
         @Override
@@ -63,11 +59,6 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     private final String name;
     private final String fieldName;
     private ObjectMapper jsonMapper = ComplexAggregatorsExtensionModule.OBJECT_MAPPER; //TODO only for POC
-//    @Inject TODO object mapper is used to finalize to string until I find the way to finalize it to JSON
-//    public void setObjectMapper(@Json final ObjectMapper jsonMapper)
-//    {
-//        this.jsonMapper = jsonMapper;
-//    }
 
     @JsonCreator
     public LongFrequencyAggregatorFactory(
@@ -231,7 +222,7 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     }
 
     /**
-     * actual type is {@link TLongLongHashMap} is string //TODO how to convert to JSON?
+     * actual type is {@link TLongLongHashMap} serialized as string
      */
     @Override
     public ColumnType getResultType() {

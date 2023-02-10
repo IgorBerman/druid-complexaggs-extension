@@ -108,7 +108,7 @@ public class LongFrequencySqlAggregator implements SqlAggregator {
             aggregatorFactory = new LongFrequencyAggregatorFactory(mapName, input.getDirectColumn());
         } else {
             String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-                    input, ColumnType.LONG //virtual column will be after casting other type to input type of frequency operator
+                    input, ColumnType.LONG //virtual column will be after casting other type to input type of frequency aggregator
             );
             aggregatorFactory = new LongFrequencyAggregatorFactory(mapName, virtualColumnName);
         }
@@ -122,7 +122,7 @@ public class LongFrequencySqlAggregator implements SqlAggregator {
                     NAME,
                     null,
                     SqlKind.OTHER_FUNCTION,
-                    ReturnTypes.explicit(SqlTypeName.VARCHAR), //TODO how to return JSON type?
+                    ReturnTypes.explicit(SqlTypeName.VARCHAR),
                     null,
                     OperandTypes.INTEGER,
                     SqlFunctionCategory.USER_DEFINED_FUNCTION,
