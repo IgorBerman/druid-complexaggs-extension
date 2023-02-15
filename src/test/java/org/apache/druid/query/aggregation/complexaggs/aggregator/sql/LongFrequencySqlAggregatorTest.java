@@ -18,6 +18,10 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.complexaggs.ComplexAggregatorsExtensionModule;
+import org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyAggregatorFactory;
+import org.apache.druid.query.aggregation.complexaggs.sql.LongFrequencySqlAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -41,9 +45,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import gnu.trove.map.hash.TLongLongHashMap;
-
-import org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyAggregatorFactory;
-import org.apache.druid.query.aggregation.complexaggs.sql.LongFrequencySqlAggregator;
 
 public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
     private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
@@ -171,13 +172,40 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
         final List<Object[]> expectedResults = ImmutableList.of(
                 new Object[]{
                         CalciteTests.getJsonMapper().writeValueAsString(expectedMap),
-                        CalciteTests.getJsonMapper().writeValueAsString(expectedMap)
                 }
         );
 
         testQuery(
                 "SELECT \n"
-                        + "FREQUENCY(l1) as l1_freq, \n"
+                        + "FREQUENCY(l1) as l1_freq \n"
+                        + "FROM " + DATASOURCE,
+                ImmutableList.of(
+                        Druids.newTimeseriesQueryBuilder()
+                                .dataSource(DATASOURCE)
+                                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                                .granularity(Granularities.ALL)
+                                .aggregators(ImmutableList.of(
+                                        new LongFrequencyAggregatorFactory("l1_freq", "l1")
+                                ))
+                                .context(QUERY_CONTEXT_DEFAULT)
+                                .build()
+                ),
+                expectedResults
+        );
+    }
+
+
+    @Test
+    public void testFrequencyOverDoubleColumn() throws JsonProcessingException {
+        TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{7, 8, 0}, new long[]{2, 3, 1});
+        final List<Object[]> expectedResults = ImmutableList.of(
+                new Object[]{
+                        CalciteTests.getJsonMapper().writeValueAsString(expectedMap),
+                }
+        );
+
+        testQuery(
+                "SELECT \n"
                         + "FREQUENCY(d1) as d1_freq \n"
                         + "FROM " + DATASOURCE,
                 ImmutableList.of(
@@ -187,7 +215,6 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                                 .granularity(Granularities.ALL)
                                 .virtualColumns(expressionVirtualColumn("v0", "CAST(\"d1\", 'LONG')", ColumnType.LONG))
                                 .aggregators(ImmutableList.of(
-                                        new LongFrequencyAggregatorFactory("l1_freq", "l1"),
                                         new LongFrequencyAggregatorFactory("d1_freq", "v0")
                                 ))
                                 .context(QUERY_CONTEXT_DEFAULT)
@@ -197,121 +224,80 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
         );
     }
 
-//  @Test
-//  public void testFrequencyOnCastedString()
-//  {
-//    testQuery(
-//        "SELECT\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.01, 20, 0.0, 10.0),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.5, 20, 0.0, 10.0),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.98, 20, 0.0, 10.0),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.99, 20, 0.0, 10.0),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE) * 2, 0.97, 40, 0.0, 20.0),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.99, 20, 0.0, 10.0) FILTER(WHERE dim1 = 'abc'),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.999, 20, 0.0, 10.0) FILTER(WHERE dim1 <> 'abc'),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(CAST(dim1 AS DOUBLE), 0.999, 20, 0.0, 10.0) FILTER(WHERE dim1 = 'abc')\n"
-//        + "FROM foo",
-//        ImmutableList.of(
-//            Druids.newTimeseriesQueryBuilder()
-//                  .dataSource(CalciteTests.DATASOURCE1)
-//                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-//                  .granularity(Granularities.ALL)
-//                  .virtualColumns(
-//                      new ExpressionVirtualColumn(
-//                          "v0",
-//                          "CAST(\"dim1\", 'DOUBLE')",
-//                          ColumnType.FLOAT,
-//                          TestExprMacroTable.INSTANCE
-//                      ),
-//                      new ExpressionVirtualColumn(
-//                          "v1",
-//                          "(CAST(\"dim1\", 'DOUBLE') * 2)",
-//                          ColumnType.FLOAT,
-//                          TestExprMacroTable.INSTANCE
-//                      )
-//                  )
-//                  .aggregators(ImmutableList.of(
-//                      new FixedBucketsHistogramAggregatorFactory(
-//                          "a0:agg",
-//                          "v0",
-//                          20,
-//                          0.0d,
-//                          10.0d,
-//                          FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-//                          false
-//                      ),
-//                      new FixedBucketsHistogramAggregatorFactory(
-//                          "a4:agg",
-//                          "v1",
-//                          40,
-//                          0.0d,
-//                          20.0d,
-//                          FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-//                          false
-//                      ),
-//                      new FilteredAggregatorFactory(
-//                          new FixedBucketsHistogramAggregatorFactory(
-//                              "a5:agg",
-//                              "v0",
-//                              20,
-//                              0.0d,
-//                              10.0d,
-//                              FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-//                              false
-//                          ),
-//                          new SelectorDimFilter("dim1", "abc", null)
-//                      ),
-//                      new FilteredAggregatorFactory(
-//                          new FixedBucketsHistogramAggregatorFactory(
-//                              "a6:agg",
-//                              "v0",
-//                              20,
-//                              0.0d,
-//                              10.0d,
-//                              FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-//                              false
-//                          ),
-//                          new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
-//                      )
-//                  ))
-//                  .postAggregators(
-//                      new QuantilePostAggregator("a0", "a0:agg", 0.01f),
-//                      new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-//                      new QuantilePostAggregator("a2", "a0:agg", 0.98f),
-//                      new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-//                      new QuantilePostAggregator("a4", "a4:agg", 0.97f),
-//                      new QuantilePostAggregator("a5", "a5:agg", 0.99f),
-//                      new QuantilePostAggregator("a6", "a6:agg", 0.999f),
-//                      new QuantilePostAggregator("a7", "a5:agg", 0.999f)
-//                  )
-//                  .context(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-//                  .build()
-//        ),
-//        ImmutableList.of(
-//            NullHandling.replaceWithDefault()
-//            ? new Object[]{
-//                0.00833333283662796,
-//                0.4166666567325592,
-//                2.450000047683716,
-//                2.4749999046325684,
-//                4.425000190734863,
-//                0.4950000047683716,
-//                2.498000144958496,
-//                0.49950000643730164
-//            }
-//            : new Object[]{
-//                1.0099999904632568,
-//                1.5,
-//                2.4800000190734863,
-//                2.490000009536743,
-//                4.470000267028809,
-//                0.0,
-//                2.499000072479248,
-//                0.0
-//            }
-//        )
-//    );
-//  }
+
+    @Test
+    public void testFrequencyOverStringColumn() throws JsonProcessingException {
+        TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{0}, new long[]{6}); //every string was translated to 0 and we have 6 rows...
+        final List<Object[]> expectedResults = ImmutableList.of(
+                new Object[]{
+                        CalciteTests.getJsonMapper().writeValueAsString(expectedMap),
+                }
+        );
+
+        testQuery(
+                "SELECT \n"
+                        + "FREQUENCY(dim1) as dim1_freq \n"
+                        + "FROM " + DATASOURCE,
+                ImmutableList.of(
+                        Druids.newTimeseriesQueryBuilder()
+                                .dataSource(DATASOURCE)
+                                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                                .granularity(Granularities.ALL)
+                                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                                .aggregators(ImmutableList.of(
+                                        new LongFrequencyAggregatorFactory("dim1_freq", "v0")
+                                ))
+                                .context(QUERY_CONTEXT_DEFAULT)
+                                .build()
+                ),
+                expectedResults
+        );
+    }
+
+    @Test
+    public void testGroupByAggregatorDefaultValues() throws JsonProcessingException {
+        TLongLongHashMap aExpectedMap = new TLongLongHashMap(new long[]{7}, new long[]{1});
+        TLongLongHashMap bExpectedMap = new TLongLongHashMap(new long[]{7}, new long[]{1});
+        TLongLongHashMap cExpectedMap = new TLongLongHashMap(new long[]{0,8}, new long[]{1,3});
+        final List<Object[]> expectedResults = ImmutableList.of(
+                new Object[]{
+                        "a", CalciteTests.getJsonMapper().writeValueAsString(aExpectedMap)
+                },
+                new Object[] {
+                    "b", CalciteTests.getJsonMapper().writeValueAsString(bExpectedMap)
+
+                },
+                new Object[] {
+                        "c", CalciteTests.getJsonMapper().writeValueAsString(cExpectedMap)
+
+                }
+        );
+
+        testQuery(
+                "SELECT \n"
+                        + "dim1, \n"
+                        + "FREQUENCY(l1) as l1_freq \n"
+                        + "FROM " + DATASOURCE + " "
+                        + "GROUP BY dim1 ",
+                ImmutableList.of(
+                        GroupByQuery.builder()
+                                .setDataSource(DATASOURCE)
+                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                .setGranularity(Granularities.ALL)
+                                .setDimensions(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
+                                .setAggregatorSpecs(
+                                        aggregators(
+                                                new LongFrequencyAggregatorFactory("l1_freq", "l1")
+                                        )
+                                )
+                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                .build()
+                ),
+                expectedResults
+        );
+
+
+    }
 //
 //  @Test
 //  public void testFrequencyOnComplexColumn()
@@ -523,64 +509,4 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 //  }
 //
 //
-//  @Test
-//  public void testGroupByAggregatorDefaultValues()
-//  {
-//    cannotVectorize();
-//    testQuery(
-//        "SELECT\n"
-//        + "dim2,\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(fbhist_m1, 0.01, 20, 0.0, 10.0) FILTER(WHERE dim1 = 'nonexistent'),\n"
-//        + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.01, 20, 0.0, 10.0) FILTER(WHERE dim1 = 'nonexistent')\n"
-//        + "FROM foo WHERE dim2 = 'a' GROUP BY dim2",
-//        ImmutableList.of(
-//            GroupByQuery.builder()
-//                        .setDataSource(CalciteTests.DATASOURCE1)
-//                        .setInterval(querySegmentSpec(Filtration.eternity()))
-//                        .setDimFilter(selector("dim2", "a", null))
-//                        .setGranularity(Granularities.ALL)
-//                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
-//                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
-//                        .setAggregatorSpecs(
-//                            aggregators(
-//                                new FilteredAggregatorFactory(
-//                                    new FixedBucketsHistogramAggregatorFactory(
-//                                        "a0:agg",
-//                                        "fbhist_m1",
-//                                        20,
-//                                        0.0,
-//                                        10.0,
-//                                        FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-//                                        false
-//                                    ),
-//                                    selector("dim1", "nonexistent", null)
-//                                ),
-//                                new FilteredAggregatorFactory(
-//                                    new FixedBucketsHistogramAggregatorFactory(
-//                                        "a1:agg",
-//                                        "m1",
-//                                        20,
-//                                        0.0,
-//                                        10.0,
-//                                        FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
-//                                        false
-//                                    ),
-//                                    selector("dim1", "nonexistent", null)
-//                                )
-//                            )
-//                        )
-//                        .setPostAggregatorSpecs(
-//                            ImmutableList.of(
-//                                new QuantilePostAggregator("a0", "a0:agg", 0.01f),
-//                                new QuantilePostAggregator("a1", "a1:agg", 0.01f)
-//                            )
-//                        )
-//                        .setContext(QUERY_CONTEXT_DEFAULT)
-//                        .build()
-//        ),
-//        ImmutableList.of(
-//            new Object[]{"a", 0.0, 0.0}
-//        )
-//    );
-//  }
 }

@@ -1,23 +1,11 @@
-## Example Druid Extension
-
-This is an example project demonstrating how to write a Druid extension. It includes:
-
-- ExampleExtractionFn, an extraction function.
-- ExampleSumAggregatorFactory (and related files), an aggregator.
-- ExampleByteBufferInputRowParser, an `InputRowParser` implementation.
-- ExampleExtensionModule, the class that registers these with Druid's extension system.
-- META-INF/services/org.apache.druid.initialization.DruidModule entry for ExampleExtensionModule.
-
-It also includes unit tests for the above.
-
-You can extend Druid with custom aggregators, query types, filters, and many more as well.
+## Druid module for implementing map like aggregations 
 
 ### Build
 
 To build the extension, run `mvn package` and you'll get a file in `target` like this:
 
 ```
-[INFO] Building tar: /src/druid-example-extension/target/druid-example-extension-0.13.0_1-SNAPSHOT-bin.tar.gz
+[INFO] Building tar: /src/druid-complexaggs-extension/target/druid-complexaggs-extension-24.0.1.0-SNAPSHOT-bin.tar.gz
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
@@ -27,21 +15,21 @@ To build the extension, run `mvn package` and you'll get a file in `target` like
 [INFO] ------------------------------------------------------------------------
 ```
 
-Unpack the tar.gz and you'll find a directory named `druid-example-extension` inside it:
+Unpack the tar.gz and you'll find a directory named `druid-complexaggs-extension` inside it:
 
 ```
-$ tar xzf target/druid-example-extension-0.13.0_1-SNAPSHOT-bin.tar.gz
-$ ls druid-example-extension-0.10.0_1-SNAPSHOT/
-LICENSE                  README.md                druid-example-extension/
+$ tar xzf target/druid-complexaggs-extension-24.0.1.0-SNAPSHOT-bin.tar.gz
+$ ls druid-complexaggs-extension-24.0.1.0-SNAPSHOT/
+LICENSE                  README.md                druid-complexaggs-extension/
 ```
 
 ### Install
 
 To install the extension:
 
-1. Copy `druid-example-extension` into your Druid `extensions` directory.
-2. Edit `conf/_common/common.runtime.properties` to add `"druid-example-extension"` to `druid.extensions.loadList`. (Edit `conf-quickstart/_common/common.runtime.properties` too if you are using the quickstart config.)
-It should look like: `druid.extensions.loadList=["druid-example-extension"]`. There may be a few other extensions there
+1. Copy `druid-complexaggs-extension` into your Druid `extensions` directory.
+2. Edit `conf/_common/common.runtime.properties` to add `"druid-complexaggs-extension"` to `druid.extensions.loadList`. (Edit `conf-quickstart/_common/common.runtime.properties` too if you are using the quickstart config.)
+It should look like: `druid.extensions.loadList=["druid-complexaggs-extension"]`. There may be a few other extensions there
 too.
 3. Restart Druid.
 

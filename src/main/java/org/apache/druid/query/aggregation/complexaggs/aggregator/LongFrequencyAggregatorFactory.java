@@ -2,6 +2,8 @@ package org.apache.druid.query.aggregation.complexaggs.aggregator;
 
 import static org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyAggregatorFactory.TYPE_NAME;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -41,7 +43,7 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     public static final int MAX_NUM_OF_DISTINCT_KEYS = 1000;//TODO make it param?
     public static final String TYPE_NAME = "frequency";
     public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
-    public static final ColumnType FINAL_TYPE = ColumnType.STRING;
+    public static final ColumnType FINAL_TYPE = ColumnType.LONG_ARRAY;
 
     public static final Comparator COMPARATOR = new Comparator() {
         @Override
@@ -118,8 +120,19 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
                 return rhs;
             }
         } else {
-            TLongLongHashMapUtils.combineWithOther((TLongLongHashMap) lhs, (TLongLongHashMap) rhs);
-            return lhs;
+            TLongLongHashMap combined = null;
+            if (lhs instanceof TLongLongHashMap) {
+                combined = (TLongLongHashMap) lhs;
+                TLongLongHashMapUtils.combineWithObject(combined, rhs);
+            } else if (rhs instanceof TLongLongHashMap) {
+                combined = (TLongLongHashMap) rhs;
+                TLongLongHashMapUtils.combineWithObject(combined, lhs);
+            } else {
+                combined = new TLongLongHashMap();
+                TLongLongHashMapUtils.combineWithObject(combined, lhs);
+                TLongLongHashMapUtils.combineWithObject(combined, rhs);
+            }
+            return combined;
         }
     }
 

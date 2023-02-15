@@ -17,9 +17,15 @@ public class TLongLongHashMapDeserializer extends StdDeserializer<TLongLongHashM
     @Override
     public TLongLongHashMap deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
             throws IOException {
-        PrimitiveArrayDeserializers<long[]> jsonDeserializer = (PrimitiveArrayDeserializers<long[]>) PrimitiveArrayDeserializers.forType(Long.class);
-        long[] keys = jsonDeserializer.deserialize(jsonParser, deserializationContext);
-        long[] values = jsonDeserializer.deserialize(jsonParser, deserializationContext);
+        int size = jsonParser.getIntValue();
+
+        long[] keys = new long[size];
+        long[] values = new long[size];
+
+        for (int i = 0; i < size; i++) {
+            keys[i] = jsonParser.getLongValue();
+            values[i] = jsonParser.getLongValue();
+        }
         return new TLongLongHashMap(keys, values);
     }
 }

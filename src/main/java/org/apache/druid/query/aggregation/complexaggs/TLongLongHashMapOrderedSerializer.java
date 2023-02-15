@@ -21,16 +21,13 @@ public class TLongLongHashMapOrderedSerializer extends StdSerializer<TLongLongHa
     @Override
     public void serialize(TLongLongHashMap map, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
             throws IOException {
-
+        jsonGenerator.writeNumber(map.size());
         long[] keys = map.keys();
         Arrays.sort(keys);
-
-        jsonGenerator.writeArray(keys, 0, keys.length);
-        long[] values = new long[map.size()];
-        int i = 0;
         for (long key : keys) {
-            values[i++] = map.get(key);
+                long value = map.get(key);
+                jsonGenerator.writeNumber(key);
+                jsonGenerator.writeNumber(value);
         }
-        jsonGenerator.writeArray(values, 0, values.length);
     }
 }

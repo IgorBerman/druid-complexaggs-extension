@@ -7,8 +7,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 
+import org.apache.druid.io.ByteBufferInputStream;
 import org.apache.druid.java.util.common.ISE;
 
 import gnu.trove.map.hash.TLongLongHashMap;
@@ -29,6 +31,17 @@ public class TLongLongHashMapUtils {
             combined.adjustOrPutValue(a, b, b);
             return true;
         });
+    }
+
+    public static TLongLongHashMap fromBuffer(ByteBuffer mutationBuffer) {
+        TLongLongHashMap map = new TLongLongHashMap();
+        try (ByteBufferInputStream bbis = new ByteBufferInputStream(mutationBuffer);
+             ObjectInputStream ois = new ObjectInputStream(bbis)) {
+            map.readExternal(ois);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return map;
     }
 
     public static TLongLongHashMap fromBytes(byte[] bytes) {
@@ -56,10 +69,6 @@ public class TLongLongHashMapUtils {
         }
     }
 
-    public static TLongLongHashMap fromBuffer(ByteBuffer mutationBuffer) {
-        return fromBytes(mutationBuffer.array());
-    }
-
     public static void combineWithObject(TLongLongHashMap combined, Object val) {
         if (val == null) {
             return;
@@ -69,6 +78,11 @@ public class TLongLongHashMapUtils {
             combineWithOther(combined, (TLongLongHashMap) val);
         } else if (val instanceof Number) {
             combineWithLong(combined, ((Number) val).longValue());
+        } else if (val instanceof ArrayList) {
+            ArrayList list = (ArrayList) val; //TODO how to test...is it array with serialized map or it's just vector of to be aggreagated column values??
+            for (Object obj : list) {
+                combineWithObject(combined, ((Number) obj).longValue());
+            }
         } else {
             throw new ISE("Unknown class for object: " + val.getClass());
         }
@@ -77,5 +91,9 @@ public class TLongLongHashMapUtils {
     public static TLongLongHashMap fromBase64(String rawValue) {
         byte[] bytes = base64Decoder.decode(rawValue.getBytes(StandardCharsets.UTF_8));
         return fromBytes(bytes);
+    }
+
+    public static void combineWithArray(TLongLongHashMap combined, ArrayList lhs) {
+
     }
 }
