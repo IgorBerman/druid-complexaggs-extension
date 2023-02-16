@@ -14,11 +14,15 @@ import org.apache.druid.io.ByteBufferInputStream;
 import org.apache.druid.java.util.common.ISE;
 
 import gnu.trove.map.hash.TLongLongHashMap;
+
 import org.apache.druid.java.util.common.logger.Logger;
+
+import com.google.api.client.util.Strings;
 
 public class TLongLongHashMapUtils {
 
     private static final Logger LOG = new Logger(TLongLongHashMapUtils.class);
+
     public static void combineWithLong(TLongLongHashMap map, long key) {
         LOG.debug(">combineWithLong [%s] + %s", map, key);
         map.adjustOrPutValue(key, 1, 1);
@@ -67,16 +71,15 @@ public class TLongLongHashMapUtils {
         LOG.debug(">toBytes [%s]", map);
         byte[] result = null;
         if (map == null) {
-            result = new byte[]{};
-        } else {
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-                map.writeExternal(oos);
-                oos.flush();
-                result = baos.toByteArray();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            map = new TLongLongHashMap();
+        }
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            map.writeExternal(oos);
+            oos.flush();
+            result = baos.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         LOG.debug("<toBytes [%s]", result);
         return result;
@@ -109,7 +112,7 @@ public class TLongLongHashMapUtils {
 
     public static long[] toArray(TLongLongHashMap map) {
         LOG.debug(">toArray [%s]", map);
-        long[] result = new long[map.size()*2];
+        long[] result = new long[map.size() * 2];
         long[] keys = map.keys();
         Arrays.sort(keys);
         int i = 0;
@@ -123,10 +126,10 @@ public class TLongLongHashMapUtils {
 
     public static TLongLongHashMap fromArray(long[] array) {
         LOG.debug(">fromArray [%s]", Arrays.toString(array));
-        int size = (array.length)/2;
+        int size = (array.length) / 2;
         long[] keys = new long[size];
         long[] values = new long[size];
-        for (int i = 0, j=0; i < array.length; j++) {
+        for (int i = 0, j = 0; i < array.length; j++) {
             long key = array[i++];
             long value = array[i++];
             keys[j] = key;
@@ -139,6 +142,9 @@ public class TLongLongHashMapUtils {
 
     public static String toStringSerializedForm(TLongLongHashMap map) {
         LOG.debug(">toStringSerializedForm [%s]", map);
+        if (map == null || map.isEmpty() || map.isEmpty()) {
+            return "[]";
+        }
         String result = Arrays.stream(toArray(map)).boxed().map(String::valueOf).collect(Collectors.joining(",", "[", "]"));
         LOG.debug("<toStringSerializedForm [%s]", result);
         return result;
@@ -146,8 +152,8 @@ public class TLongLongHashMapUtils {
 
     public static TLongLongHashMap fromStringSerializedForm(String serializedAsString) {
         LOG.debug(">fromStringSerializedForm [%s]", serializedAsString);
-        if (serializedAsString == null) {
-            return null;
+        if (Strings.isNullOrEmpty(serializedAsString) || "[]".equals(serializedAsString)) {
+            return new TLongLongHashMap();
         }
         long[] serializedAsArray = Arrays.stream(serializedAsString.substring(1, serializedAsString.length() - 1).split(",")).mapToLong(Long::parseLong).toArray();
         TLongLongHashMap result = fromArray(serializedAsArray);
