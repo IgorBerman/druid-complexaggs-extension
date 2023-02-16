@@ -31,6 +31,17 @@ final class LongFrequencyBufferAggregatorHelper {
         mutationBuffer.put(TLongLongHashMapUtils.toBytes(h0));
     }
 
+    public void aggregateWithLong(ByteBuffer buf, int position, long val) {
+        ByteBuffer mutationBuffer = buf.duplicate();
+        mutationBuffer.position(position);
+
+        TLongLongHashMap h0 = TLongLongHashMapUtils.fromBuffer(mutationBuffer);
+        TLongLongHashMapUtils.combineWithLong(h0, val);
+
+        mutationBuffer.position(position);
+        mutationBuffer.put(TLongLongHashMapUtils.toBytes(h0));
+    }
+
     public TLongLongHashMap get(ByteBuffer buf, int position) {
         ByteBuffer mutationBuffer = buf.duplicate();
         mutationBuffer.position(position);

@@ -32,7 +32,9 @@ public class LongFrequencyVectorAggregator implements VectorAggregator {
         boolean[] isNull = selector.getNullVector();
         TLongLongHashMap map = innerAggregator.get(buf, position);
         for (int i = startRow; i < endRow; i++) {
-            TLongLongHashMapUtils.combineWithObject(map, toObject(vector, isNull, i));
+            if (!isNull(isNull, i)) {
+                TLongLongHashMapUtils.combineWithLong(map, vector[i]);
+            }
         }
         innerAggregator.put(buf, position, map);
     }
@@ -44,8 +46,9 @@ public class LongFrequencyVectorAggregator implements VectorAggregator {
         for (int i = 0; i < numRows; i++) {
             int position = positions[i] + positionOffset;
             int index = rows != null ? rows[i] : i;
-            Long val = toObject(vector, isNull, index);
-            innerAggregator.aggregate(buf, position, val);
+            if (!isNull(isNull, index)) {
+                innerAggregator.aggregate(buf, position, vector[index]);
+            }
         }
     }
 
@@ -60,8 +63,7 @@ public class LongFrequencyVectorAggregator implements VectorAggregator {
         // Nothing to close
     }
 
-    @Nullable
-    private Long toObject(long[] vector, @Nullable boolean[] isNull, int index) {
-        return (isNull != null && isNull[index]) ? null : vector[index];
+    private boolean isNull(@Nullable boolean[] isNull, int index) {
+        return (isNull != null && isNull[index]);
     }
 }
