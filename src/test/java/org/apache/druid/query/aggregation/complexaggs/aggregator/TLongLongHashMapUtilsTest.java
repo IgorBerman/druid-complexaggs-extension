@@ -158,16 +158,16 @@ public class TLongLongHashMapUtilsTest {
         String mergedSegmentsStringForm = TLongLongHashMapUtils.toStringSerializedForm(mergedSegments);
 
         TLongLongHashMap map3 = new TLongLongHashMap();
-        TLongLongHashMapUtils.combineWithLong(map, 3L);
-        TLongLongHashMapUtils.combineWithLong(map, 4L);
+        TLongLongHashMapUtils.combineWithLong(map3, 3L);
+        TLongLongHashMapUtils.combineWithLong(map3, 4L);
         String map3StringForm = TLongLongHashMapUtils.toStringSerializedForm(map3);
 
 
-        TLongLongHashMap combined =new TLongLongHashMap();
+        TLongLongHashMap combined = new TLongLongHashMap();
         TLongLongHashMapUtils.combineWithObject(combined, mergedSegmentsStringForm);
         TLongLongHashMapUtils.combineWithObject(combined, map3StringForm);
 
-        assertEquals(new TLongLongHashMap(new long[]{1,2,3,4}, new long[]{2,1,3,1}), combined);
+        assertEquals(new TLongLongHashMap(new long[]{1,2,3,4}, new long[]{2,1,2,1}), combined);
 
     }
 }
