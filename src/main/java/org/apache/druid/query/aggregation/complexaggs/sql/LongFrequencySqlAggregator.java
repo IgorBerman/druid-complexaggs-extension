@@ -17,7 +17,6 @@ import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
-import org.apache.calcite.sql.type.SqlSingleOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
@@ -185,7 +184,7 @@ public class LongFrequencySqlAggregator implements SqlAggregator {
                                             SIGNATURE,
                                             OperandTypes.ANY,
                                             OperandTypes.NUMERIC
-                                            ),
+                                    ),
                                     OperandTypes.family(
                                             SqlTypeFamily.ANY,
                                             SqlTypeFamily.NUMERIC)
