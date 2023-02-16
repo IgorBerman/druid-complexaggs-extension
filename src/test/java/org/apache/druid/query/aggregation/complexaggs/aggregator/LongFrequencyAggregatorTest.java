@@ -27,7 +27,7 @@ public class LongFrequencyAggregatorTest {
 
     @Before
     public void setup() {
-        frequencyAggFactory = new LongFrequencyAggregatorFactory("outputField", "inputField");
+        frequencyAggFactory = new LongFrequencyAggregatorFactory("outputField", "inputField", 10);
         combiningAggFactory = (LongFrequencyAggregatorFactory) frequencyAggFactory.getCombiningFactory();
         valueSelector = new TestLongColumnSelector(longs);
         objectSelector = new TestObjectColumnSelector<>(objects);

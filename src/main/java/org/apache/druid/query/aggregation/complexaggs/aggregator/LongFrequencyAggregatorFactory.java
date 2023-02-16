@@ -10,7 +10,6 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -36,7 +35,6 @@ import gnu.trove.map.hash.TLongLongHashMap;
 @JsonTypeName(TYPE_NAME)
 public class LongFrequencyAggregatorFactory extends AggregatorFactory {
 
-    public static final int MAX_NUM_OF_DISTINCT_KEYS = 1000;//TODO make it param?
     public static final String TYPE_NAME = "frequency";
     public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
     public static final ColumnType FINAL_TYPE = ColumnType.STRING;
@@ -56,14 +54,17 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
 
     private final String name;
     private final String fieldName;
+    private final int maxNumberOfEntries;
 
     @JsonCreator
     public LongFrequencyAggregatorFactory(
             @JsonProperty("name") String name,
-            @JsonProperty("fieldName") String fieldName
+            @JsonProperty("fieldName") String fieldName,
+            @JsonProperty("maxNumberOfEntries") int maxNumberOfEntries
     ) {
         this.name = name;
         this.fieldName = fieldName;
+        this.maxNumberOfEntries = maxNumberOfEntries;
     }
 
     @Override
@@ -164,7 +165,8 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     public AggregatorFactory getCombiningFactory() {
         return new LongFrequencyAggregatorFactory(
                 name,
-                name
+                name,
+                maxNumberOfEntries
         );
     }
 
@@ -172,7 +174,8 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     public AggregatorFactory getMergingFactory(AggregatorFactory other) {
         return new LongFrequencyAggregatorFactory(
                 name,
-                name
+                name,
+                maxNumberOfEntries
         );
     }
 
@@ -181,7 +184,8 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
         return Collections.singletonList(
                 new LongFrequencyAggregatorFactory(
                         fieldName,
-                        fieldName
+                        fieldName,
+                        maxNumberOfEntries
                 )
         );
     }
@@ -238,20 +242,22 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
 
     @Override
     public int getMaxIntermediateSize() {
-        return  Long.BYTES * 2 * MAX_NUM_OF_DISTINCT_KEYS; //TODO what can be better here?
+        return  Long.BYTES * 2 * maxNumberOfEntries;
     }
 
     public AggregatorFactory withName(String newName) {
         return new LongFrequencyAggregatorFactory(
                 newName,
-                getFieldName()
+                getFieldName(),
+                getMaxNumberOfEntries()
         );
     }
 
     @Override
     public byte[] getCacheKey() {
         final CacheKeyBuilder builder = new CacheKeyBuilder(DYNAMIC_FREQUENCIES_TYPE_ID)
-                .appendString(fieldName);
+                .appendString(fieldName)
+                .appendInt(maxNumberOfEntries);
 
         return builder.build();
     }
@@ -261,32 +267,31 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
         return fieldName;
     }
 
+
+    @JsonProperty
+    public int getMaxNumberOfEntries() {
+        return maxNumberOfEntries;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         LongFrequencyAggregatorFactory that = (LongFrequencyAggregatorFactory) o;
-        return Objects.equals(getName(), that.getName()) &&
-                Objects.equals(getFieldName(), that.getFieldName());
+        return maxNumberOfEntries == that.maxNumberOfEntries && Objects.equals(name, that.name) && Objects.equals(fieldName, that.fieldName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(
-                getName(),
-                getFieldName()
-        );
+        return Objects.hash(name, fieldName, maxNumberOfEntries);
     }
 
     @Override
     public String toString() {
-        return "DynamicFrequenciesAggregatorFactory{" +
+        return "LongFrequencyAggregatorFactory{" +
                 "name='" + name + '\'' +
                 ", fieldName='" + fieldName + '\'' +
+                ", maxNumberOfEntries=" + maxNumberOfEntries +
                 '}';
     }
 }

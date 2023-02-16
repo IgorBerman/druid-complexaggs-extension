@@ -25,7 +25,7 @@ public class LongLongFrequencyAggregatorFactoryTest {
     @Test
     public void testSimpleCombine() {
 
-        final LongFrequencyAggregatorFactory agg = new LongFrequencyAggregatorFactory(OUTPUT_COLUMN, INPUT_COLUMN);
+        final LongFrequencyAggregatorFactory agg = new LongFrequencyAggregatorFactory(OUTPUT_COLUMN, INPUT_COLUMN, 10);
         Assert.assertEquals(OUTPUT_COLUMN, agg.getName());
         Assert.assertEquals(INPUT_COLUMN, agg.getFieldName());
         Assert.assertEquals(LongFrequencyAggregatorFactory.TYPE, agg.getIntermediateType());
@@ -44,13 +44,13 @@ public class LongLongFrequencyAggregatorFactoryTest {
     public void testSerde() throws Exception {
 
         Assert.assertEquals(
-                new LongFrequencyAggregatorFactory("billy", "nilly"),
-                MAPPER.readValue("{ \"type\" : \"frequency\", \"name\" : \"billy\",  \"fieldName\": \"nilly\"}", LongFrequencyAggregatorFactory.class)
+                new LongFrequencyAggregatorFactory("billy", "nilly", 10),
+                MAPPER.readValue("{ \"type\" : \"frequency\", \"name\" : \"billy\",  \"fieldName\": \"nilly\", \"maxNumberOfEntries\": \"10\"}", LongFrequencyAggregatorFactory.class)
         );
 
-        final LongFrequencyAggregatorFactory agg = new LongFrequencyAggregatorFactory(OUTPUT_COLUMN, INPUT_COLUMN);
+        final LongFrequencyAggregatorFactory agg = new LongFrequencyAggregatorFactory(OUTPUT_COLUMN, INPUT_COLUMN, 10);
         Assert.assertEquals(
-                new LongFrequencyAggregatorFactory(OUTPUT_COLUMN, INPUT_COLUMN),
+                new LongFrequencyAggregatorFactory(OUTPUT_COLUMN, INPUT_COLUMN, 10),
                 MAPPER.readValue(MAPPER.writeValueAsBytes(agg), LongFrequencyAggregatorFactory.class)
         );
     }

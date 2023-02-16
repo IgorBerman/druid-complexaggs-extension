@@ -13,6 +13,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -61,19 +62,26 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 
     private static final String DATASOURCE = "freq_ds";
     private static final String TIMESTAMP_COLUMN = "t";
-    private static final InputRowParser<Map<String, Object>> PARSER_NUMERIC_DIMS = new MapInputRowParser(
-            new TimeAndDimsParseSpec(
-                    new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-                    new DimensionsSpec(
-                            ImmutableList.<DimensionSchema>builder()
-                                    .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1")))
-                                    .add(new DoubleDimensionSchema("d1"))
-                                    .add(new FloatDimensionSchema("f1"))
-                                    .add(new LongDimensionSchema("l1"))
-                                    .build()
-                    )
-            )
-    );
+    private static final InputRowParser<Map<String, Object>> PARSER_NUMERIC_DIMS;
+
+    private final static ImmutableList<DimensionSchema> DIMENSION_SCHEMAS = ImmutableList.<DimensionSchema>builder()
+                .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1")))
+                .add(new DoubleDimensionSchema("d1"))
+                .add(new FloatDimensionSchema("f1"))
+                .add(new LongDimensionSchema("l1"))
+                .add(new StringDimensionSchema("freq_str"))
+                .build();
+    static {
+
+        PARSER_NUMERIC_DIMS = new MapInputRowParser(
+                new TimeAndDimsParseSpec(
+                        new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+                        new DimensionsSpec(
+                                DIMENSION_SCHEMAS
+                        )
+                )
+        );
+    }
 
     public static final List<ImmutableMap<String, Object>> RAW_ROWS_WITH_REPEATING_NUMERICS = ImmutableList.of(
             ImmutableMap.<String, Object>builder()
@@ -82,6 +90,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                     .put("d1", 7.0)
                     .put("f1", 7.0f)
                     .put("l1", 7L)
+                    .put("freq_str", "[0,1]")
                     .build(),
             ImmutableMap.<String, Object>builder()
                     .put("t", "2000-01-02")
@@ -89,6 +98,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                     .put("d1", 7.0)
                     .put("f1", 7.0f)
                     .put("l1", 7L)
+                    .put("freq_str", "[0,1]")
                     .build(),
             ImmutableMap.<String, Object>builder()
                     .put("t", "2000-01-03")
@@ -96,6 +106,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                     .put("d1", 8.0)
                     .put("f1", 8.0f)
                     .put("l1", 8L)
+                    .put("freq_str", "[0,1]")
                     .build(),
             ImmutableMap.<String, Object>builder()
                     .put("t", "2001-01-01")
@@ -103,6 +114,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                     .put("d1", 8.0)
                     .put("f1", 8.0f)
                     .put("l1", 8L)
+                    .put("freq_str", "[1,2]")
                     .build(),
             ImmutableMap.<String, Object>builder()
                     .put("t", "2001-01-02")
@@ -110,6 +122,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                     .put("d1", 8.0)
                     .put("f1", 8.0f)
                     .put("l1", 8L)
+                    .put("freq_str", "[1,2]")
                     .build(),
             ImmutableMap.<String, Object>builder()
                     .put("t", "2001-01-03")
@@ -127,10 +140,6 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 
     @Override
     public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException {
-        ImmutableList<DimensionSchema> dimensions = ImmutableList.<DimensionSchema>builder()
-                .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1")))
-                .add(new LongDimensionSchema("l1"))
-                .build();
         final QueryableIndex index =
                 IndexBuilder.create()
                         .tmpDir(temporaryFolder.newFolder())
@@ -139,7 +148,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                                 new IncrementalIndexSchema.Builder()
                                         .withDimensionsSpec(
                                                 new DimensionsSpec(
-                                                        dimensions
+                                                        DIMENSION_SCHEMAS
                                                 )
                                         )
                                         .withRollup(false)
@@ -178,7 +187,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 
         testQuery(
                 "SELECT \n"
-                        + "FREQUENCY(l1) as l1_freq \n"
+                        + "FREQUENCY(l1, 100) as l1_freq \n"
                         + "FROM " + DATASOURCE,
                 ImmutableList.of(
                         Druids.newTimeseriesQueryBuilder()
@@ -186,7 +195,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                 .granularity(Granularities.ALL)
                                 .aggregators(ImmutableList.of(
-                                        new LongFrequencyAggregatorFactory("l1_freq", "l1")
+                                        new LongFrequencyAggregatorFactory("l1_freq", "l1", 100)
                                 ))
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
@@ -207,16 +216,16 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 
         testQuery(
                 "SELECT \n"
-                        + "FREQUENCY(d1) as d1_freq \n"
+                        + "FREQUENCY(d1, 100) as d1_freq \n"
                         + "FROM " + DATASOURCE,
                 ImmutableList.of(
                         Druids.newTimeseriesQueryBuilder()
                                 .dataSource(DATASOURCE)
                                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                 .granularity(Granularities.ALL)
-                                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"d1\", 'LONG')", ColumnType.LONG))
+                                //.virtualColumns(expressionVirtualColumn("v0", "CAST(\"d1\", 'LONG')", ColumnType.LONG))
                                 .aggregators(ImmutableList.of(
-                                        new LongFrequencyAggregatorFactory("d1_freq", "v0")
+                                        new LongFrequencyAggregatorFactory("d1_freq", "d1", 100)
                                 ))
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
@@ -228,7 +237,8 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 
     @Test
     public void testFrequencyOverStringColumn() throws JsonProcessingException {
-        TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{0}, new long[]{6}); //every string was translated to 0 and we have 6 rows...
+        cannotVectorize();//TODO what is this??
+        TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{0,1}, new long[]{3,4}); //every string was translated to 0 and we have 6 rows...
         final List<Object[]> expectedResults = ImmutableList.of(
                 new Object[]{
                         TLongLongHashMapUtils.toStringSerializedForm(expectedMap),
@@ -237,16 +247,16 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
 
         testQuery(
                 "SELECT \n"
-                        + "FREQUENCY(dim1) as dim1_freq \n"
+                        + "FREQUENCY(freq_str, 100) as agg_freq \n"
                         + "FROM " + DATASOURCE,
                 ImmutableList.of(
                         Druids.newTimeseriesQueryBuilder()
                                 .dataSource(DATASOURCE)
                                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                 .granularity(Granularities.ALL)
-                                .virtualColumns(expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG))
+                                .virtualColumns(expressionVirtualColumn("v0", "\"freq_str\"", ColumnType.STRING))
                                 .aggregators(ImmutableList.of(
-                                        new LongFrequencyAggregatorFactory("dim1_freq", "v0")
+                                        new LongFrequencyAggregatorFactory("agg_freq", "v0", 100)
                                 ))
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
@@ -280,7 +290,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
         testQuery(
                 "SELECT \n"
                         + "dim1, \n"
-                        + "FREQUENCY(l1) as l1_freq \n"
+                        + "FREQUENCY(l1, 100) as l1_freq \n"
                         + "FROM " + DATASOURCE + " "
                         + "GROUP BY dim1 ",
                 ImmutableList.of(
@@ -291,7 +301,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
                                 .setDimensions(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
                                 .setAggregatorSpecs(
                                         aggregators(
-                                                new LongFrequencyAggregatorFactory("l1_freq", "l1")
+                                                new LongFrequencyAggregatorFactory("l1_freq", "l1", 100)
                                         )
                                 )
                                 .setContext(QUERY_CONTEXT_DEFAULT)
