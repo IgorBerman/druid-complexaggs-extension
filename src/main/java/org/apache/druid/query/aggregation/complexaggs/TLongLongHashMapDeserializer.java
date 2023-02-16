@@ -4,28 +4,24 @@ import gnu.trove.map.hash.TLongLongHashMap;
 
 import java.io.IOException;
 
+import org.apache.druid.query.aggregation.complexaggs.aggregator.TLongLongHashMapUtils;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.PrimitiveArrayDeserializers;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
 public class TLongLongHashMapDeserializer extends StdDeserializer<TLongLongHashMap> {
+    private final PrimitiveArrayDeserializers<long[]> jsonDeserializer;
     public TLongLongHashMapDeserializer() {
         super(TLongLongHashMap.class);
+        this.jsonDeserializer = (PrimitiveArrayDeserializers<long[]>) PrimitiveArrayDeserializers.forType(Long.TYPE);
     }
 
     @Override
     public TLongLongHashMap deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
             throws IOException {
-        int size = jsonParser.getIntValue();
-
-        long[] keys = new long[size];
-        long[] values = new long[size];
-
-        for (int i = 0; i < size; i++) {
-            keys[i] = jsonParser.getLongValue();
-            values[i] = jsonParser.getLongValue();
-        }
-        return new TLongLongHashMap(keys, values);
+        long[] array = jsonDeserializer.deserialize(jsonParser, deserializationContext);
+        return TLongLongHashMapUtils.fromArray(array);
     }
 }

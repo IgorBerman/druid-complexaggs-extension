@@ -1,5 +1,9 @@
 package org.apache.druid.query.aggregation.complexaggs.sql;
 
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyAggregatorFactory;
 import org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyPostAggregator;
 
@@ -23,10 +27,13 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import com.google.common.collect.ImmutableList;
 
@@ -90,12 +97,10 @@ public class LongFrequencySqlAggregator implements SqlAggregator {
                         inputMatches = virtualInput.equals(input);
                     }
 
-                    final boolean matches = inputMatches;
-
-                    if (matches) {
+                    if (inputMatches) {
                         // Found existing one. Use this.
                         return Aggregation.create(
-                                ImmutableList.of(),
+                                ImmutableList.of(factory),
                                 new LongFrequencyPostAggregator(name, mapName)
                         );
                     }
@@ -117,6 +122,8 @@ public class LongFrequencySqlAggregator implements SqlAggregator {
     }
 
     private static class DynamicFrequenciesSqlAggFunction extends SqlAggFunction {
+        private static final ArrayReturnTypeInference RETURN_TYPE_INFERENCE = new ArrayReturnTypeInference();
+
         DynamicFrequenciesSqlAggFunction() {
             super(
                     NAME,
@@ -132,4 +139,13 @@ public class LongFrequencySqlAggregator implements SqlAggregator {
             );
         }
     }
+    static class ArrayReturnTypeInference implements SqlReturnTypeInference {
+        ArrayReturnTypeInference() {
+        }
+        public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding) {
+            RelDataType type = sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.BINARY);
+            return sqlOperatorBinding.getTypeFactory().createArrayType(type, -1L);
+        }
+    }
+
 }

@@ -19,6 +19,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.complexaggs.ComplexAggregatorsExtensionModule;
 import org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyAggregatorFactory;
+import org.apache.druid.query.aggregation.complexaggs.aggregator.TLongLongHashMapUtils;
 import org.apache.druid.query.aggregation.complexaggs.sql.LongFrequencySqlAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -26,12 +27,12 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -171,7 +172,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
         TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{7, 8, 0}, new long[]{2, 3, 1});
         final List<Object[]> expectedResults = ImmutableList.of(
                 new Object[]{
-                        CalciteTests.getJsonMapper().writeValueAsString(expectedMap),
+                        TLongLongHashMapUtils.toStringSerializedForm(expectedMap)
                 }
         );
 
@@ -200,7 +201,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
         TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{7, 8, 0}, new long[]{2, 3, 1});
         final List<Object[]> expectedResults = ImmutableList.of(
                 new Object[]{
-                        CalciteTests.getJsonMapper().writeValueAsString(expectedMap),
+                        TLongLongHashMapUtils.toStringSerializedForm(expectedMap),
                 }
         );
 
@@ -230,7 +231,7 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
         TLongLongHashMap expectedMap = new TLongLongHashMap(new long[]{0}, new long[]{6}); //every string was translated to 0 and we have 6 rows...
         final List<Object[]> expectedResults = ImmutableList.of(
                 new Object[]{
-                        CalciteTests.getJsonMapper().writeValueAsString(expectedMap),
+                        TLongLongHashMapUtils.toStringSerializedForm(expectedMap),
                 }
         );
 
@@ -255,24 +256,27 @@ public class LongFrequencySqlAggregatorTest extends BaseCalciteQueryTest {
     }
 
     @Test
-    public void testGroupByAggregatorDefaultValues() throws JsonProcessingException {
+    public void testGroupByAggregator() throws JsonProcessingException {
         TLongLongHashMap aExpectedMap = new TLongLongHashMap(new long[]{7}, new long[]{1});
         TLongLongHashMap bExpectedMap = new TLongLongHashMap(new long[]{7}, new long[]{1});
         TLongLongHashMap cExpectedMap = new TLongLongHashMap(new long[]{0,8}, new long[]{1,3});
         final List<Object[]> expectedResults = ImmutableList.of(
                 new Object[]{
-                        "a", CalciteTests.getJsonMapper().writeValueAsString(aExpectedMap)
+                        "a", TLongLongHashMapUtils.toStringSerializedForm(aExpectedMap)
                 },
                 new Object[] {
-                    "b", CalciteTests.getJsonMapper().writeValueAsString(bExpectedMap)
+                    "b", TLongLongHashMapUtils.toStringSerializedForm(bExpectedMap)
 
                 },
                 new Object[] {
-                        "c", CalciteTests.getJsonMapper().writeValueAsString(cExpectedMap)
+                        "c", TLongLongHashMapUtils.toStringSerializedForm(cExpectedMap)
 
                 }
         );
 
+        RowSignature resultRowSignature = RowSignature.builder()
+                .add("dim1", ColumnType.STRING)
+                .add("l1_freq", ColumnType.LONG_ARRAY).build();
         testQuery(
                 "SELECT \n"
                         + "dim1, \n"

@@ -1,10 +1,12 @@
 package org.apache.druid.query.aggregation.complexaggs;
 
 import java.io.IOException;
-import java.util.Arrays;
+
+import org.apache.druid.query.aggregation.complexaggs.aggregator.TLongLongHashMapUtils;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.ser.std.StdArraySerializers;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 import gnu.trove.map.hash.TLongLongHashMap;
@@ -14,6 +16,7 @@ import gnu.trove.map.hash.TLongLongHashMap;
  * Probably might be done faster with working with key,value pair and implementing Comparator
  */
 public class TLongLongHashMapOrderedSerializer extends StdSerializer<TLongLongHashMap> {
+    StdArraySerializers.LongArraySerializer delegate = new StdArraySerializers.LongArraySerializer();
     public TLongLongHashMapOrderedSerializer() {
         super(TLongLongHashMap.class);
     }
@@ -21,13 +24,6 @@ public class TLongLongHashMapOrderedSerializer extends StdSerializer<TLongLongHa
     @Override
     public void serialize(TLongLongHashMap map, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
             throws IOException {
-        jsonGenerator.writeNumber(map.size());
-        long[] keys = map.keys();
-        Arrays.sort(keys);
-        for (long key : keys) {
-                long value = map.get(key);
-                jsonGenerator.writeNumber(key);
-                jsonGenerator.writeNumber(value);
-        }
+        delegate.serialize(TLongLongHashMapUtils.toArray(map), jsonGenerator, serializerProvider);
     }
 }

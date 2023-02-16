@@ -2,8 +2,6 @@ package org.apache.druid.query.aggregation.complexaggs.aggregator;
 
 import static org.apache.druid.query.aggregation.complexaggs.aggregator.LongFrequencyAggregatorFactory.TYPE_NAME;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -19,7 +17,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.complexaggs.ComplexAggregatorsExtensionModule;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -31,9 +28,8 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
+
 import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 
@@ -43,7 +39,7 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     public static final int MAX_NUM_OF_DISTINCT_KEYS = 1000;//TODO make it param?
     public static final String TYPE_NAME = "frequency";
     public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
-    public static final ColumnType FINAL_TYPE = ColumnType.LONG_ARRAY;
+    public static final ColumnType FINAL_TYPE = ColumnType.STRING;
 
     public static final Comparator COMPARATOR = new Comparator() {
         @Override
@@ -60,7 +56,6 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
 
     private final String name;
     private final String fieldName;
-    private ObjectMapper jsonMapper = ComplexAggregatorsExtensionModule.OBJECT_MAPPER; //TODO only for POC
 
     @JsonCreator
     public LongFrequencyAggregatorFactory(
@@ -194,9 +189,7 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
     @Override
     public Object deserialize(Object object) {
         if (object instanceof String) {
-            byte[] bytes = StringUtils.decodeBase64(StringUtils.toUtf8((String) object));
-            final TLongLongHashMap fbh = TLongLongHashMapUtils.fromBytes(bytes);
-            return fbh;
+            return TLongLongHashMapUtils.fromStringSerializedForm((String) object);
         } else {
             return object;
         }
@@ -208,11 +201,12 @@ public class LongFrequencyAggregatorFactory extends AggregatorFactory {
         if (object == null) {
             return null;
         }
-        try {
-            return jsonMapper.writeValueAsString(object);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        if (!(object instanceof TLongLongHashMap)) { // TODO what is this???
+            TLongLongHashMap map = new TLongLongHashMap();
+            TLongLongHashMapUtils.combineWithObject(map, object);
+            object = map;
         }
+        return TLongLongHashMapUtils.toStringSerializedForm((TLongLongHashMap)object);
     }
 
     @JsonProperty
