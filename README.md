@@ -35,93 +35,23 @@ too.
 
 ### Use
 
-#### ExampleExtractionFn
-To use the example extractionFn, call it like a normal extractionFn with type "example", e.g. in a
-topN. It returns the first "length" characters of each value.
+#### LongFrequencyAggregator
+Count number of occurrences of some field's values(e.g. you have countryId as dimension and you want to count number of occurrences each country appears in input stream). This might help you when you would hold 2 datasources and would want to join between them(in RDBMS).
 
 ```json
 {
-  "queryType": "topN",
-  "dataSource": "wikiticker",
-  "intervals": [
-    "2016-06-27/2016-06-28"
-  ],
-  "granularity": "all",
-  "dimension": {
-    "type": "extraction",
-    "dimension": "page",
-    "outputName": "page",
-    "extractionFn": {
-      "type": "example",
-      "length": 5
-    }
-  },
-  "metric": "edits",
-  "threshold": 25,
-  "aggregations": [
-    {
-      "type": "longSum",
-      "name": "edits",
-      "fieldName": "count"
-    }
-  ]
+  "type": "frequency",
+  "name": "your_field_name_counts",
+  "fieldName": "your_field_name",
+  "maxNumberOfEntries": 100
 }
 ```
-
-#### ExampleAggregator
-To use the example aggregator, use the type "exampleSum". It does the same thing as the built-in
-"doubleSum" aggregator.
-
-
-#### ExampleByteBufferInputRowParser
-
-The `ExampleByteBufferInputRowParser` illustrates how an extension can to do a custom transformation of binary input 
-data during indexing. This example extension translates rot13 encoded base64 binary data into Strings, which can then
-be transformed into a `Map` by any `ParseSpec` that that implements a string parser, e.g. `json`, `csv`, `tsv`, and so 
-on.
-
-```json
-{
-  "type": "kafka",
-  "dataSchema": {
-    "dataSource": "example-dataset",
-    "parser": {
-      "type": "exampleParser",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": []
-        }
-      }
-    },
-    "metricsSpec": [
-      {
-        "name": "count",
-        "type": "count"
-      }
-    ],
-    "granularitySpec": {
-      "type": "uniform",
-      "segmentGranularity": "HOUR",
-      "queryGranularity": "NONE"
-    }
-  },
-  "tuningConfig": {
-    "type": "kafka",
-    "maxRowsPerSegment": 5000000
-  },
-  "ioConfig": {
-    "topic": "rot13base64json",
-    "consumerProperties": {
-      "bootstrap.servers": "localhost:9092"
-    },
-    "taskCount": 1,
-    "replicas": 1,
-    "taskDuration": "PT1H"
-  }
-}
+you can also rollup over this field and this aggregate over non-aggreagted field(your_field_name) or partially aggregated field(your_field_name_agg)
+as SQL:
+```sql
+   SELECT
+      TIME_FLOOR(__time, 'PT5M') as t
+    , FREQUENCY(your_field_name, 100) as freq
+    , FREQUENCY(your_field_name_agg, 100) as agg_freq_after_rollup
+  FROM data_source
 ```
